@@ -654,7 +654,6 @@ class RequestHandler(object):
         
         url_path = self.application.settings.get('static_url_path',
                                                     '/static/')
-        logging.info('Hello ' + base + str( getattr(self, 'include_host', False)))
         if hashes.get(path):
             return base + url_path + path + "?v=" + hashes[path][:5]
         else:
