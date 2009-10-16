@@ -616,6 +616,9 @@ class RequestHandler(object):
         application (which specifies the root directory of your static
         files).
 
+        This method makes use of the 'static_url_path' setting if it 
+        exists to construct a URL rooted at that path.
+
         We append ?v=<signature> to the returned URL, which makes our
         static file handler set an infinite expiration header on the
         returned content. The signature is based on the content of the
@@ -639,12 +642,23 @@ class RequestHandler(object):
             except:
                 logging.error("Could not open static file %r", path)
                 hashes[path] = None
-        base = self.request.protocol + "://" + self.request.host \
-            if getattr(self, "include_host", False) else ""
+        base = ""
+        if getattr(self, 'include_host', False):
+            host = self.application.settings.get('static_url', 
+                                                 self.request.host)
+            if not host.startswith('http://') or \
+                    not host.startswith('https://'):
+                base = self.request.protocol + '://' + host
+            else:
+                base = host
+        
+        url_path = self.application.settings.get('static_url_path',
+                                                    '/static/')
+        logging.info('Hello ' + base + str( getattr(self, 'include_host', False)))
         if hashes.get(path):
-            return base + "/static/" + path + "?v=" + hashes[path][:5]
+            return base + url_path + path + "?v=" + hashes[path][:5]
         else:
-            return base + "/static/" + path
+            return base + url_path + path
 
     def async_callback(self, callback, *args, **kwargs):
         """Wrap callbacks with this if they are used on asynchronous requests.
@@ -870,8 +884,17 @@ class Application(object):
         if self.settings.get("static_path"):
             path = self.settings["static_path"]
             handlers = list(handlers or [])
+
+            url_path = self.settings.get('static_url_path', '/static/')
+            if not url_path.startswith('/'):
+                url_path = '/' + url_path
+            if not url_path.endswith('/'):
+                url_path += '/'
+
+            self.settings['static_url_path'] = url_path
+
             handlers.extend([
-                (r"/static/(.*)", StaticFileHandler, dict(path=path)),
+                (r"%s(.*)" % url_path, StaticFileHandler, dict(path=path)),
                 (r"/(favicon\.ico)", StaticFileHandler, dict(path=path)),
                 (r"/(robots\.txt)", StaticFileHandler, dict(path=path)),
             ])
