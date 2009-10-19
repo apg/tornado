@@ -1296,8 +1296,6 @@ class URLSpec(object):
     def reverse(self, *args):
         assert len(args) == self.group_count, "required number of arguments "\
             "not found"
-        import pdb
-        pdb.set_trace()
         if not len(args):
             return self.path
         return self.path % tuple([str(a) for a in args])
